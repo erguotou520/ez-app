@@ -46,6 +46,12 @@
     <string name="clipboard_listening">Clipboard listening</string>
     <string name="clipboard_limit">Clipboard history limit</string>
     <string name="clipboard_enable">Enable Clipboard</string>
+    <string name="clipboard_sync">Sync clipboard</string>
+    <string name="clipboard_sync_summary">Automatically sync clipboard while this is the active input method</string>
+    <string name="clipboard_sync_account">MQTT account</string>
+    <string name="clipboard_sync_account_not_configured">Tap to configure username and password</string>
+    <string name="clipboard_sync_username">Username</string>
+    <string name="clipboard_sync_password">Password</string>
     <string name="expanded_candidate_style">Expanded candidate style</string>
     <string name="expanded_candidate_style_grid">Grid</string>
     <string name="expanded_candidate_style_flexbox">Flexbox</string>
@@ -59,6 +65,8 @@
     <string name="clear_clb_db">Clear clipboard database</string>
     <string name="pin">Pin</string>
     <string name="unpin">Unpin</string>
+    <string name="star">Star</string>
+    <string name="unstar">Remove star</string>
     <string name="delete">Delete</string>
     <string name="clipboard">Clipboard</string>
     <string name="keyboard_height">Keyboard height</string>

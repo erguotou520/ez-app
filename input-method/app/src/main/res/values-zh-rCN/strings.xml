@@ -46,6 +46,12 @@
     <string name="clipboard_listening">记录剪贴板历史</string>
     <string name="clipboard_limit">剪贴板历史记录上限</string>
     <string name="clipboard_enable">启用剪贴板</string>
+    <string name="clipboard_sync">同步剪切板</string>
+    <string name="clipboard_sync_summary">使用当前输入法时自动同步剪切板</string>
+    <string name="clipboard_sync_account">MQTT 账号</string>
+    <string name="clipboard_sync_account_not_configured">点击配置用户名和密码</string>
+    <string name="clipboard_sync_username">用户名</string>
+    <string name="clipboard_sync_password">密码</string>
     <string name="expanded_candidate_style">展开候选词样式</string>
     <string name="expanded_candidate_style_grid">表格</string>
     <string name="expanded_candidate_style_flexbox">弹性盒</string>
@@ -59,6 +65,8 @@
     <string name="clear_clb_db">清空剪贴板数据库</string>
     <string name="pin">置顶</string>
     <string name="unpin">取消置顶</string>
+    <string name="star">收藏</string>
+    <string name="unstar">取消收藏</string>
     <string name="delete">删除</string>
     <string name="clipboard">剪贴板</string>
     <string name="keyboard_height">键盘高度</string>

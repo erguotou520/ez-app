@@ -20,3 +20,5 @@ cmdline-tools.zip
 **/*.keystore
 **/*.jks
 android/captures/
+input-method/app/src/main/assets/descriptor.json
+input-method/app/src/main/assets/usr/

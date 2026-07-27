@@ -10,12 +10,10 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.text.TextUtils
-import android.view.View
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView
 import splitties.dimensions.dp
-import splitties.resources.drawable
 import splitties.views.dsl.constraintlayout.bottomOfParent
 import splitties.views.dsl.constraintlayout.centerVertically
 import splitties.views.dsl.constraintlayout.constraintLayout
@@ -28,7 +26,6 @@ import splitties.views.dsl.core.lParams
 import splitties.views.dsl.core.matchParent
 import splitties.views.dsl.core.textView
 import splitties.views.dsl.core.wrapContent
-import splitties.views.imageDrawable
 import splitties.views.setPaddingDp
 
 class ClipboardEntryUi(override val ctx: Context, private val theme: Theme, radius: Float) : Ui {
@@ -42,20 +39,22 @@ class ClipboardEntryUi(override val ctx: Context, private val theme: Theme, radi
         setTextColor(theme.keyTextColor)
     }
 
-    val pin = imageView {
-        imageDrawable = drawable(R.drawable.ic_baseline_push_pin_24)!!.apply {
-            setTint(theme.altKeyTextColor)
-            setAlpha(0.3f)
-        }
+    val star = imageView {
+        isClickable = true
+        isFocusable = true
+        contentDescription = ctx.getString(R.string.star)
+        imageTintList = ColorStateList.valueOf(theme.altKeyTextColor)
+        setPaddingDp(4, 4, 4, 4)
+        setBackgroundResource(android.R.drawable.list_selector_background)
     }
 
     val layout = constraintLayout {
         add(textView, lParams(matchParent, wrapContent) {
             centerVertically()
         })
-        add(pin, lParams(dp(12), dp(12)) {
-            bottomOfParent(dp(2))
-            endOfParent(dp(2))
+        add(star, lParams(dp(28), dp(28)) {
+            bottomOfParent(dp(1))
+            endOfParent(dp(1))
         })
     }
 
@@ -78,6 +77,12 @@ class ClipboardEntryUi(override val ctx: Context, private val theme: Theme, radi
 
     fun setEntry(text: String, pinned: Boolean) {
         textView.text = text
-        pin.visibility = if (pinned) View.VISIBLE else View.GONE
+        textView.setPaddingDp(8, 4, 34, 4)
+        star.setImageResource(
+            if (pinned) R.drawable.ic_baseline_star_24
+            else R.drawable.ic_outline_star_24
+        )
+        star.alpha = if (pinned) 1f else 0.55f
+        star.contentDescription = ctx.getString(if (pinned) R.string.unstar else R.string.star)
     }
 }

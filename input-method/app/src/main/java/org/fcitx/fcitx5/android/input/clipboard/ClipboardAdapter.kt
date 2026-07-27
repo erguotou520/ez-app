@@ -95,16 +95,19 @@ abstract class ClipboardAdapter(
             root.setOnClickListener {
                 onPaste(entry)
             }
+            star.setOnClickListener {
+                if (entry.pinned) onUnpin(entry.id) else onPin(entry.id)
+            }
             root.setOnLongClickListener {
                 val popup = PopupMenu(ctx, root)
                 val menu = popup.menu
                 val iconTint = ctx.styledColor(android.R.attr.colorControlNormal)
                 if (entry.pinned) {
-                    menu.item(R.string.unpin, R.drawable.ic_outline_push_pin_24, iconTint) {
+                    menu.item(R.string.unstar, R.drawable.ic_outline_star_24, iconTint) {
                         onUnpin(entry.id)
                     }
                 } else {
-                    menu.item(R.string.pin, R.drawable.ic_baseline_push_pin_24, iconTint) {
+                    menu.item(R.string.star, R.drawable.ic_baseline_star_24, iconTint) {
                         onPin(entry.id)
                     }
                 }
