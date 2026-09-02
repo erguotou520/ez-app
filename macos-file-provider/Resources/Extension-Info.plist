@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>EzRemoteFileProvider</string>
+<key>CFBundleIdentifier</key><string>com.erguotou.ezremote.fileprovider</string>
+<key>CFBundleName</key><string>EzFiles</string>
+<key>CFBundleDisplayName</key><string>EzFiles</string>
+<key>CFBundlePackageType</key><string>XPC!</string>
+<key>CFBundleShortVersionString</key><string>0.1.0</string>
+<key>CFBundleVersion</key><string>2</string>
+<key>NSExtension</key><dict>
+<key>NSExtensionPointIdentifier</key><string>com.apple.fileprovider-nonui</string>
+<key>NSExtensionPrincipalClass</key><string>EzRemoteFileProvider.FileProviderExtension</string>
+<key>NSExtensionFileProviderSupportsEnumeration</key><true/>
+</dict>
+<key>NSFileProviderDomainUsageDescription</key>
+<string>将用户配置的远程文件存储显示在 Finder 中。</string>
+</dict></plist>

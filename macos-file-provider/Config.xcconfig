@@ -1,0 +1,7 @@
+PRODUCT_NAME = EzRemoteDrive
+PRODUCT_BUNDLE_IDENTIFIER = com.erguotou.ezremote
+FILE_PROVIDER_BUNDLE_IDENTIFIER = com.erguotou.ezremote.fileprovider
+APP_GROUP_IDENTIFIER = group.com.erguotou.ezremote
+MACOSX_DEPLOYMENT_TARGET = 13.0
+DEVELOPMENT_TEAM =
+

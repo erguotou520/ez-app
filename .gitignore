@@ -5,10 +5,12 @@
 .gradle-home-input-method/
 .kotlin/
 .reasonix/
+reasonix.toml
 cmdline-tools.zip
 
 **/.gradle/
 **/.build/
+**/.swift-module-cache/
 **/build/
 **/dist/
 **/.cxx/
@@ -19,6 +21,6 @@ cmdline-tools.zip
 **/*.aab
 **/*.keystore
 **/*.jks
-android/captures/
-input-method/app/src/main/assets/descriptor.json
-input-method/app/src/main/assets/usr/
+android-toolbox/captures/
+android-fcitx5-input-method/app/src/main/assets/descriptor.json
+android-fcitx5-input-method/app/src/main/assets/usr/
