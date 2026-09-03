@@ -1,0 +1,37 @@
+name: macOS App
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-clipboard-bridge:
+    name: macOS clipboard bridge
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and package app
+        working-directory: macos-clipboard-bridge
+        run: |
+          zsh scripts/package_app.sh
+
+      - name: Archive app bundle
+        working-directory: macos-clipboard-bridge
+        run: |
+          # ditto 保留 .app 内的符号链接与权限，避免 upload-artifact 丢失。
+          ditto -c -k --keepParent "dist/拾光快捷工具.app" "dist/拾光快捷工具.zip"
+          ls -la dist/
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ez-macos-${{ github.sha }}
+          path: macos-clipboard-bridge/dist/拾光快捷工具.zip
+          if-no-files-found: error
