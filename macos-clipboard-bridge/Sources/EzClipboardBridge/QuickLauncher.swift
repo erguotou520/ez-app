@@ -316,7 +316,9 @@ private final class QuickLauncherView: NSView, NSTextFieldDelegate, NSTableViewD
         layer?.cornerCurve = .continuous
         // 用系统毛玻璃替换原来的纯色背景，窗口后方内容以磨砂方式透出。
         layer?.masksToBounds = true
-        layer?.borderWidth = 0
+        // 偏黑色外边框：沿窗口圆角描边，透明度取中间值避免生硬。
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor(white: 0, alpha: 0.55).cgColor
 
         let effectView = NSVisualEffectView()
         effectView.translatesAutoresizingMaskIntoConstraints = false
@@ -330,6 +332,19 @@ private final class QuickLauncherView: NSView, NSTextFieldDelegate, NSTableViewD
             effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
             effectView.topAnchor.constraint(equalTo: topAnchor),
             effectView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+
+        // 提亮层：在磨砂之上叠一层低透明度白色，让背景比纯 menu 材质稍亮一点。
+        let brightenView = NSView()
+        brightenView.wantsLayer = true
+        brightenView.layer?.backgroundColor = NSColor(white: 1, alpha: 0.08).cgColor
+        brightenView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(brightenView, positioned: .above, relativeTo: effectView)
+        NSLayoutConstraint.activate([
+            brightenView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            brightenView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            brightenView.topAnchor.constraint(equalTo: topAnchor),
+            brightenView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
         inputBackground.wantsLayer = true
