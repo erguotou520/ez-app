@@ -334,10 +334,11 @@ private final class QuickLauncherView: NSView, NSTextFieldDelegate, NSTableViewD
             effectView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
-        // 提亮层：在磨砂之上叠一层低透明度白色，让背景比纯 menu 材质稍亮一点。
+        // 提亮层：在磨砂之上叠一层低透明度白色，让背景比纯 menu 材质亮。
+        // 想再亮/再暗就调这里的 alpha（0~1），例如 0.15、0.2。
         let brightenView = NSView()
         brightenView.wantsLayer = true
-        brightenView.layer?.backgroundColor = NSColor(white: 1, alpha: 0.08).cgColor
+        brightenView.layer?.backgroundColor = NSColor(white: 1, alpha: 0.15).cgColor
         brightenView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(brightenView, positioned: .above, relativeTo: effectView)
         NSLayoutConstraint.activate([
