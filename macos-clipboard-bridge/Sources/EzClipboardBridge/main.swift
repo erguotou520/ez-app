@@ -2,6 +2,7 @@ import AppKit
 import CryptoKit
 import Foundation
 import Network
+import ServiceManagement
 
 private let protocolAAD = Data("ez-clipboard-v1".utf8)
 private let serviceType = "_ezclip._tcp"
@@ -132,6 +133,7 @@ final class StatusMenu {
     private let historyMenu = NSMenu()
     private let historyStore: ClipboardHistoryStore
     private let mqttSettingsWindow: MqttSettingsWindowController
+    private let appSettingsWindow: AppSettingsWindowController
     private let launcher: QuickLauncherController
 
     init(
@@ -149,6 +151,7 @@ final class StatusMenu {
             password: configuration.mqttPassword ?? "",
             onSave: onSaveMqtt
         )
+        appSettingsWindow = AppSettingsWindowController()
         // Keep the original clipboard-shaped menu bar glyph; it stays legible
         // as a monochrome template while the full-color icon is used by the app.
         item.button?.image = NSImage(
@@ -168,10 +171,17 @@ final class StatusMenu {
         menu.addItem(.separator())
         menu.addItem(statusItem)
         menu.addItem(.separator())
+        let settingsItem = NSMenuItem(
+            title: "偏好设置…",
+            action: #selector(openAppSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         let mqttItem = NSMenuItem(
             title: "远程同步设置…",
             action: #selector(openMqttSettings),
-            keyEquivalent: ","
+            keyEquivalent: ""
         )
         mqttItem.target = self
         menu.addItem(mqttItem)
@@ -197,6 +207,10 @@ final class StatusMenu {
 
     @objc private func openMqttSettings() {
         mqttSettingsWindow.show()
+    }
+
+    @objc private func openAppSettings() {
+        appSettingsWindow.show()
     }
 
     @objc private func openLauncher() {
@@ -383,6 +397,91 @@ final class MqttSettingsView: NSView {
             return
         }
         onSave(host, port, usernameField.stringValue, passwordField.stringValue)
+    }
+}
+
+final class AppSettingsWindowController: NSWindowController, NSWindowDelegate {
+    init() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 240),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "偏好设置"
+        window.isReleasedWhenClosed = false
+        super.init(window: window)
+        window.contentView = AppSettingsView()
+        window.center()
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    func show() {
+        guard let window else { return }
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        showWindow(nil)
+        window.makeKeyAndOrderFront(nil)
+    }
+}
+
+final class AppSettingsView: NSView {
+    private let launchAtLogin = NSButton(checkboxWithTitle: "开机自启动", target: nil, action: nil)
+
+    init() {
+        super.init(frame: NSRect(x: 0, y: 0, width: 440, height: 240))
+
+        let title = NSTextField(labelWithString: "通用")
+        title.font = .boldSystemFont(ofSize: 20)
+        title.frame = NSRect(x: 28, y: 189, width: 384, height: 26)
+        addSubview(title)
+
+        launchAtLogin.target = self
+        launchAtLogin.action = #selector(toggleLaunchAtLogin)
+        launchAtLogin.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        launchAtLogin.frame = NSRect(x: 24, y: 140, width: 392, height: 28)
+        addSubview(launchAtLogin)
+
+        let detail = NSTextField(
+            wrappingLabelWithString: "开启后，登录 Mac 时自动启动拾光快捷工具，方便随时同步剪切板。"
+        )
+        detail.textColor = .secondaryLabelColor
+        detail.frame = NSRect(x: 46, y: 100, width: 370, height: 34)
+        addSubview(detail)
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        let service = SMAppService.mainApp
+        if launchAtLogin.state == .on {
+            do {
+                try service.register()
+            } catch {
+                launchAtLogin.state = service.status == .enabled ? .on : .off
+                presentRegistrationError(error)
+            }
+        } else {
+            do {
+                try service.unregister()
+            } catch {
+                launchAtLogin.state = service.status == .enabled ? .on : .off
+                presentRegistrationError(error)
+            }
+        }
+    }
+
+    private func presentRegistrationError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "无法更改开机自启动设置"
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "好")
+        alert.runModal()
     }
 }
 
