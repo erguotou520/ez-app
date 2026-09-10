@@ -870,8 +870,52 @@ private func mqttEncryptionKey(username: String, password: String) -> SymmetricK
     )
 }
 
+// 菜单栏应用（LSUIElement / .accessory）没有可见主菜单，导致 ⌘V/⌘C/⌘X/⌘A
+// 等编辑快捷键没有 keyEquivalent 可路由，输入框无法粘贴。安装一个最小
+// Edit 主菜单（不显示），让这些快捷键沿响应链送达 first responder。
+private func installEditMenu() {
+    let mainMenu = NSMenu()
+    let appItem = NSMenuItem()
+    mainMenu.addItem(appItem)
+    let appMenu = NSMenu(title: "拾光快捷工具")
+    appMenu.addItem(
+        withTitle: "退出",
+        action: #selector(NSApplication.terminate(_:)),
+        keyEquivalent: "q"
+    )
+    appItem.submenu = appMenu
+
+    let editItem = NSMenuItem()
+    mainMenu.addItem(editItem)
+    let editMenu = NSMenu(title: "编辑")
+    editMenu.addItem(
+        withTitle: "剪切",
+        action: #selector(NSText.cut(_:)),
+        keyEquivalent: "x"
+    )
+    editMenu.addItem(
+        withTitle: "复制",
+        action: #selector(NSText.copy(_:)),
+        keyEquivalent: "c"
+    )
+    editMenu.addItem(
+        withTitle: "粘贴",
+        action: #selector(NSText.paste(_:)),
+        keyEquivalent: "v"
+    )
+    editMenu.addItem(
+        withTitle: "全选",
+        action: #selector(NSText.selectAll(_:)),
+        keyEquivalent: "a"
+    )
+    editItem.submenu = editMenu
+
+    NSApp.mainMenu = mainMenu
+}
+
 do {
     NSApplication.shared.setActivationPolicy(.accessory)
+    installEditMenu()
     let historyStore = ClipboardHistoryStore()
     let launcher = QuickLauncherController()
     let commandMonitor = CommandDoubleTapMonitor { [weak launcher] in launcher?.toggle() }
