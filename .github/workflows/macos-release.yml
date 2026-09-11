@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   macos-clipboard-bridge:
@@ -35,3 +35,11 @@ jobs:
           name: ez-macos-${{ github.sha }}
           path: macos-clipboard-bridge/dist/拾光快捷工具.zip
           if-no-files-found: error
+
+      # 仅在打 tag（v*）时发布 GitHub Release，说明由 changelog 自动生成。
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: macos-clipboard-bridge/dist/拾光快捷工具.zip
+          generate_release_notes: true
