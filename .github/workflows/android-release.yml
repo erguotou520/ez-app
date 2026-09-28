@@ -11,8 +11,38 @@ permissions:
   contents: read
 
 jobs:
+  # 统一解析版本号，供下面两个构建 job 和发布 job 复用，避免各 job 各算一套导致对不上。
+  resolve-version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.resolve.outputs.version_name }}
+      version_code: ${{ steps.resolve.outputs.version_code }}
+    steps:
+      - name: Resolve version from tag
+        id: resolve
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # 打 tag（如 v1.2.1）时：versionName 取 1.2.1，versionCode 用
+            # major*10000 + minor*100 + patch 派生，保证每次发版单调递增，
+            # 用户手机上才能覆盖安装升级。上限 2100000000。
+            version_name="${GITHUB_REF_NAME#v}"
+            IFS='.' read -r major minor patch <<< "$version_name"
+            version_code=$(( ${major:-0} * 10000 + ${minor:-0} * 100 + ${patch:-0} ))
+          else
+            # 非 tag 触发（push main / PR / 手动）：产物只用于验证构建，不参与正式发版。
+            version_name="0.0.0-snapshot"
+            version_code=1
+          fi
+          {
+            echo "version_name=$version_name"
+            echo "version_code=$version_code"
+          } >> "$GITHUB_OUTPUT"
+          echo "resolved version: $version_name ($version_code)"
+
   android-toolbox:
     name: Android toolbox
+    needs: resolve-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +54,11 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
+      # 工具箱的 buildToolsVersion 固定为 35.0.1，setup-android 不会预装它。
+      # 显式安装，保证后面用绝对路径调 apksigner 时一定存在。
+      - name: Install build-tools
+        run: sdkmanager "build-tools;35.0.1"
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Restore release keystore
@@ -33,9 +68,14 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
         run: |
-          test -n "$KEYSTORE_BASE64"
-          test -n "$KEYSTORE_PASSWORD"
-          test -n "$KEY_ALIAS"
+          missing=()
+          [ -n "$KEYSTORE_BASE64" ] || missing+=(ANDROID_RELEASE_KEYSTORE_BASE64)
+          [ -n "$KEYSTORE_PASSWORD" ] || missing+=(ANDROID_RELEASE_KEYSTORE_PASSWORD)
+          [ -n "$KEY_ALIAS" ] || missing+=(ANDROID_RELEASE_KEY_ALIAS)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::缺少签名密钥 ${missing[*]}。请在仓库 Settings → Secrets and variables → Actions 中配置后重跑。"
+            exit 1
+          fi
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ez-release.jks"
           chmod 600 "$RUNNER_TEMP/ez-release.jks"
 
@@ -49,7 +89,9 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             ./gradlew :app:assembleDebug
           else
-            ./gradlew :app:assembleRelease
+            ./gradlew :app:assembleRelease \
+              -PezVersionName="${{ needs.resolve-version.outputs.version_name }}" \
+              -PezVersionCode="${{ needs.resolve-version.outputs.version_code }}"
           fi
 
       - name: Verify release signature
@@ -61,13 +103,16 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ez-android-${{ github.sha }}
+          name: ez-toolbox-apk
           path: android-toolbox/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
   input-method:
     name: Input method
+    needs: resolve-version
     runs-on: ubuntu-latest
+    # native（fcitx5 / libime 等）编译较慢，给个上限避免异常时白占 runner。
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -80,6 +125,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # 版本与 android-fcitx5-input-method/build-logic/.../Versions.kt 保持一致，
+      # extra-cmake-modules 供 find_package(ECM) 使用。
       - name: Install native build dependencies
         run: |
           sudo apt-get update
@@ -93,9 +140,14 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
         run: |
-          test -n "$KEYSTORE_BASE64"
-          test -n "$KEYSTORE_PASSWORD"
-          test -n "$KEY_ALIAS"
+          missing=()
+          [ -n "$KEYSTORE_BASE64" ] || missing+=(ANDROID_RELEASE_KEYSTORE_BASE64)
+          [ -n "$KEYSTORE_PASSWORD" ] || missing+=(ANDROID_RELEASE_KEYSTORE_PASSWORD)
+          [ -n "$KEY_ALIAS" ] || missing+=(ANDROID_RELEASE_KEY_ALIAS)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::缺少签名密钥 ${missing[*]}。请在仓库 Settings → Secrets and variables → Actions 中配置后重跑。"
+            exit 1
+          fi
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ez-release.jks"
           chmod 600 "$RUNNER_TEMP/ez-release.jks"
 
@@ -111,18 +163,62 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             ./gradlew :app:assembleDebug
           else
-            ./gradlew :app:assembleRelease
+            ./gradlew :app:assembleRelease \
+              -PezVersionName="${{ needs.resolve-version.outputs.version_name }}" \
+              -PezVersionCode="${{ needs.resolve-version.outputs.version_code }}"
           fi
 
       - name: Verify release signature
         if: github.event_name != 'pull_request'
         run: |
+          # -r 避免 find 无结果时仍然调用一次无参数的 apksigner。
           find android-fcitx5-input-method/app/build/outputs/apk -name '*release*.apk' -print0 \
-            | xargs -0 -n1 "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose
+            | xargs -0 -r -n1 "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ez-input-method-arm64-${{ github.sha }}
+          name: ez-input-method-apk
           path: android-fcitx5-input-method/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+
+  # 打 v* tag 时，把两个 APK 汇总重命名后发布到 GitHub Release。
+  # concurrency 的 group 与 macOS 工作流保持一致，让两个 workflow 的发布动作串行，
+  # 避免它们同时创建同一个 tag 的 Release 而互相冲突。
+  publish:
+    name: Publish release
+    needs: [resolve-version, android-toolbox, input-method]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: gh-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Download APKs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ez-*-apk
+          path: apks
+
+      - name: Rename APKs
+        run: |
+          set -euo pipefail
+          version="${{ needs.resolve-version.outputs.version_name }}"
+
+          toolbox_apk=$(find apks/ez-toolbox-apk -name '*release*.apk' | head -1)
+          input_method_apk=$(find apks/ez-input-method-apk -name '*release*.apk' | head -1)
+          [ -n "$toolbox_apk" ] || { echo "::error::未找到工具箱的 release APK"; exit 1; }
+          [ -n "$input_method_apk" ] || { echo "::error::未找到输入法的 release APK"; exit 1; }
+
+          mv "$toolbox_apk" "apks/拾光工具箱-${version}.apk"
+          mv "$input_method_apk" "apks/小企鹅输入法-${version}-arm64-v8a.apk"
+          rm -rf apks/ez-toolbox-apk apks/ez-input-method-apk
+          ls -la apks/
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apks/*.apk
+          generate_release_notes: true

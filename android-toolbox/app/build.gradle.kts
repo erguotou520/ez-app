@@ -13,8 +13,10 @@ android {
         applicationId = "com.erguotou.ezapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        // 版本号由 CI 通过 -PezVersionCode / -PezVersionName 注入（打 v* tag 发布时，
+        // 从 tag 派生）。本地构建不传这两个属性，回退到下面的默认值。
+        versionCode = providers.gradleProperty("ezVersionCode").map { it.toInt() }.orElse(1).get()
+        versionName = providers.gradleProperty("ezVersionName").orElse("1.0.0").get()
     }
 
     signingConfigs {

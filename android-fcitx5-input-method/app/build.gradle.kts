@@ -15,6 +15,10 @@ android {
     defaultConfig {
         applicationId = "org.fcitx.fcitx5.android"
         versionName = providers.gradleProperty("ezVersionName").orElse("1.0.0").get()
+        // 版本号由 CI 通过 -PezVersionCode 注入（打 v* tag 发布时，从 tag 派生）。
+        // 不注入时保持上游 build-logic 的默认逻辑（Versions.calculateVersionCode()），
+        // 这样不会影响与上游 fcitx5-android 的同步。
+        providers.gradleProperty("ezVersionCode").orNull?.let { versionCode = it.toInt() }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         @Suppress("UnstableApiUsage")

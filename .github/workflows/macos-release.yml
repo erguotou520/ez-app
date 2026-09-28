@@ -14,6 +14,11 @@ jobs:
   macos-clipboard-bridge:
     name: macOS clipboard bridge
     runs-on: macos-14
+    # 打 tag 时与 Android 工作流的发布 job 共用同一个 group，让两个 workflow 的
+    # 发布动作串行，避免它们同时创建同一个 tag 的 Release 而互相冲突。
+    concurrency:
+      group: gh-release-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
