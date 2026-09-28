@@ -222,8 +222,11 @@ jobs:
           [ -n "$toolbox_apk" ] || { echo "::error::未找到工具箱的 release APK"; exit 1; }
           [ -n "$input_method_apk" ] || { echo "::error::未找到输入法的 release APK"; exit 1; }
 
-          mv "$toolbox_apk" "apks/拾光工具箱-${version}.apk"
-          mv "$input_method_apk" "apks/小企鹅输入法-${version}-arm64-v8a.apk"
+          # 资产名必须只用 ASCII 的字母数字与 . - _：GitHub 会改写含非字母数字
+          # （中文即属此类）的资产名，下载下来会变成 default.<ext>，且两个同类
+          # 资产会撞成同一个名字而互相覆盖。中文名改由 label 呈现（见下一步）。
+          mv "$toolbox_apk" "apks/ez-toolbox-${version}.apk"
+          mv "$input_method_apk" "apks/ez-input-method-${version}-arm64-v8a.apk"
           rm -rf apks/ez-toolbox-apk apks/ez-input-method-apk
           ls -la apks/
 
@@ -232,3 +235,31 @@ jobs:
         with:
           files: apks/*.apk
           generate_release_notes: true
+
+      # Release 页面展示的是 label，用它把中文名补回来（下载文件名仍是 ASCII 资产名）。
+      # 纯展示用途，失败不让整个发版失败。
+      - name: Restore Chinese asset labels
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${{ needs.resolve-version.outputs.version_name }}"
+          tag="$GITHUB_REF_NAME"
+
+          set_label() {
+            local name="$1" label="$2" id
+            id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" \
+                   --jq ".assets[] | select(.name == \"$name\") | .id")
+            if [ -z "$id" ]; then
+              # 注意：变量后紧跟中文必须写成 ${name}，否则 bash 会把中文的首字节
+              # 当成变量名的一部分（set -u 下直接报 unbound variable）。
+              echo "::warning::未找到资产 ${name}，跳过 label"
+              return 0
+            fi
+            printf '{"label":"%s"}' "$label" \
+              | gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/assets/$id" --input -
+          }
+
+          set_label "ez-toolbox-${version}.apk" "拾光工具箱 ${version}"
+          set_label "ez-input-method-${version}-arm64-v8a.apk" "小企鹅输入法 ${version} arm64-v8a"

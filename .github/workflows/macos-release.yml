@@ -31,14 +31,16 @@ jobs:
         working-directory: macos-clipboard-bridge
         run: |
           # ditto 保留 .app 内的符号链接与权限，避免 upload-artifact 丢失。
-          ditto -c -k --keepParent "dist/拾光快捷工具.app" "dist/拾光快捷工具.zip"
+          # 资产名只用 ASCII：GitHub 会改写含中文的资产名，下载时会变成 default.zip。
+          # .app 自身的中文名不受影响（它在 zip 内部）。中文名由 label 呈现。
+          ditto -c -k --keepParent "dist/拾光快捷工具.app" "dist/ez-quick-tool.zip"
           ls -la dist/
 
       - name: Upload app
         uses: actions/upload-artifact@v4
         with:
           name: ez-macos-${{ github.sha }}
-          path: macos-clipboard-bridge/dist/拾光快捷工具.zip
+          path: macos-clipboard-bridge/dist/ez-quick-tool.zip
           if-no-files-found: error
 
       # 仅在打 tag（v*）时发布 GitHub Release，说明由 changelog 自动生成。
@@ -46,5 +48,23 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: macos-clipboard-bridge/dist/拾光快捷工具.zip
+          files: macos-clipboard-bridge/dist/ez-quick-tool.zip
           generate_release_notes: true
+
+      # Release 页面展示的是 label，用它把中文名补回来。
+      # 纯展示用途，失败不让整个发版失败。
+      - name: Restore Chinese asset label
+        if: startsWith(github.ref, 'refs/tags/v')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
+                 --jq '.assets[] | select(.name == "ez-quick-tool.zip") | .id')
+          if [ -z "$id" ]; then
+            echo "::warning::未找到资产 ez-quick-tool.zip，跳过 label"
+            exit 0
+          fi
+          printf '{"label":"%s"}' "拾光快捷工具" \
+            | gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/assets/$id" --input -
