@@ -15,9 +15,10 @@ android {
     defaultConfig {
         applicationId = "org.fcitx.fcitx5.android"
         versionName = providers.gradleProperty("ezVersionName").orElse("1.0.0").get()
-        // 版本号由 CI 通过 -PezVersionCode 注入（打 v* tag 发布时，从 tag 派生）。
-        // 不注入时保持上游 build-logic 的默认逻辑（Versions.calculateVersionCode()），
-        // 这样不会影响与上游 fcitx5-android 的同步。
+        // versionCode 的注入见文件末尾的 androidComponents { onVariants { ... } }：
+        // 那里才是真正生效的地方（NativeAppConventionPlugin 会在 variant output 层
+        // 按 ABI 再设一次，优先级高于 defaultConfig）。这里只是没有 ABI filter 的
+        // variant 的兜底值。
         providers.gradleProperty("ezVersionCode").orNull?.let { versionCode = it.toInt() }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -60,6 +61,32 @@ android {
     androidResources {
         @Suppress("UnstableApiUsage")
         generateLocaleConfig = true
+    }
+}
+
+// 版本号由 CI 通过 -PezVersionCode 注入（打 v* tag 发布时从 tag 派生）。
+// 必须在这一层覆盖：NativeAppConventionPlugin 会对每个 ABI output 再设一次
+// versionCode（baseVersionCode*10 + abiId），其优先级高于 defaultConfig，
+// 只在 defaultConfig 里注入会被静默覆盖（表现为 versionName 变了、versionCode 没变）。
+// 不注入时完全走上游逻辑，不影响与 fcitx5-android 上游的同步。
+androidComponents {
+    onVariants { variant ->
+        val injected = providers.gradleProperty("ezVersionCode").orNull?.toInt() ?: return@onVariants
+        variant.outputs.forEach { output ->
+            val abi = output.filters.find {
+                it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI
+            }
+            // 沿用上游的 ABI 编码习惯：低一位是 abiId，保证同一版本下不同 ABI 的码不同，
+            // 且 ezVersionCode*10 + abiId 跨版本单调递增（上限 2100000000）。
+            val abiId = when (abi?.identifier) {
+                "armeabi-v7a" -> 1
+                "arm64-v8a" -> 2
+                "x86" -> 3
+                "x86_64" -> 4
+                else -> 0
+            }
+            output.versionCode.set(injected * 10 + abiId)
+        }
     }
 }
 
