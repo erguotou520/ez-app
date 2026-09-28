@@ -53,6 +53,11 @@ jobs:
           java-version: "17"
 
       - uses: android-actions/setup-android@v3
+        with:
+          # 该 action 的默认值是 `tools platform-tools`，但 `tools` 包已被 Google 从 SDK
+          # 仓库下架（由 cmdline-tools 取代），sdkmanager 会报
+          # "Failed to find package 'tools'" 并以 exit 1 结束整个 action。故只装 platform-tools。
+          packages: platform-tools
 
       # 工具箱的 buildToolsVersion 固定为 35.0.1，setup-android 不会预装它。
       # 显式安装，保证后面用绝对路径调 apksigner 时一定存在。
@@ -122,6 +127,11 @@ jobs:
           java-version: "17"
 
       - uses: android-actions/setup-android@v3
+        with:
+          # 该 action 的默认值是 `tools platform-tools`，但 `tools` 包已被 Google 从 SDK
+          # 仓库下架（由 cmdline-tools 取代），sdkmanager 会报
+          # "Failed to find package 'tools'" 并以 exit 1 结束整个 action。故只装 platform-tools。
+          packages: platform-tools
 
       - uses: gradle/actions/setup-gradle@v4
 
